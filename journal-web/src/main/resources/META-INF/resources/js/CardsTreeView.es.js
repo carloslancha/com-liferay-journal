@@ -4,6 +4,8 @@ import core from 'metal/src/core';
 import dom from 'metal-dom/src/dom';
 import Treeview from 'metal-treeview';
 
+import Autocomplete from 'metal-autocomplete';
+
 import templates from './CardsTreeView.soy';
 
 /**
@@ -21,7 +23,39 @@ class CardsTreeview extends Treeview {
 	/**
 	 * @inheritDoc
 	 */
+	attached() {
+		let inputSearch = document.getElementById(this.filterElementId);
+
+		if (!inputSearch) {
+			return;
+		}
+
+		dom.on(inputSearch, 'keyup', this.filterOnKeyup.bind(this));
+
+		new Autocomplete(
+			{
+				inputElement: inputSearch,
+				data: query => {
+					return this.originalNodes.filter(function(item) {
+						item.textPrimary = item.name;
+						return query && item.name.toLowerCase().indexOf(query.toLowerCase()) !== -1;
+					});
+				},
+				select: event => {
+					inputSearch.value = event.name;
+
+					this.filterNodes(event.name);
+				}
+			}
+		);
+	}
+
+	/**
+	 * @inheritDoc
+	 */
 	created() {
+		this.originalNodes = JSON.parse(JSON.stringify(this.nodes));
+
 		this.expandSelectedNodesParentNodes_(this.nodes);
 		this.addSelectedNodes_(this.nodes);
 	}
@@ -40,7 +74,7 @@ class CardsTreeview extends Treeview {
 					this.addSelectedNodes_(node.children);
 				}
 
-				if (node.selected) {
+				if (node.selected || this.selectedNodes.indexOf(node) !== -1) {
 					this.selectNode_(node);
 				}
 			}
@@ -87,7 +121,7 @@ class CardsTreeview extends Treeview {
 			(node) => {
 				expanded = node.expanded;
 
-				if (node.selected) {
+				if (node.selected || this.selectedNodes.indexOf(node) !== -1) {
 					expandedParent = true;
 				}
 
@@ -101,6 +135,48 @@ class CardsTreeview extends Treeview {
 		);
 
 		return expandedParent;
+	}
+
+	/**
+	 * Filter original nodes list based on specific value.
+	 * @param value Value to filter original nodes list with.
+	 * @protected
+	 */
+	filterNodes(value) {
+		let filterFunction = function(nodes) {
+			let filteredNodes = [];
+
+			nodes.filter(
+				node => {
+					if (node.children) {
+						Array.prototype.push.apply(filteredNodes, filterFunction.bind(this)(node.children));
+
+						delete node.children;
+					}
+
+					if (node.name.toLowerCase().indexOf(value.toLowerCase()) !== -1) {
+						filteredNodes.push(node);
+					}
+				},
+				this
+			);
+
+			return filteredNodes;
+		};
+
+		this.nodes = JSON.parse(JSON.stringify(this.originalNodes));
+
+		if (value.length == 0) {
+			return;
+		}
+
+		this.nodes = filterFunction.bind(this)(this.nodes);
+	}
+
+	filterOnKeyup(event) {
+		let value = event.target.value;
+
+		this.filterNodes(value);
 	}
 
 	/**
@@ -277,6 +353,12 @@ class CardsTreeview extends Treeview {
  * @static
  */
 CardsTreeview.STATE = {
+
+	filterElementId: {
+		validator: core.isString,
+		value: ''
+	},
+
 	/**
 	 * Enables multiple selection of tree elements
 	 * @type {boolean}
@@ -284,6 +366,11 @@ CardsTreeview.STATE = {
 	multiSelection: {
 		validator: core.isBoolean,
 		value: false
+	},
+
+	originalNodes: {
+		validator: core.isArray,
+		value: []
 	},
 
 	selectedNodes: {
