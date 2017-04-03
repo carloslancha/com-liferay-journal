@@ -20,12 +20,6 @@
 String eventName = ParamUtil.getString(request, "eventName", liferayPortletResponse.getNamespace() + "selectFolder");
 %>
 
-<aui:nav-bar cssClass="collapse-basic-search" markupView="lexicon">
-	<aui:nav-bar-search>
-		<liferay-ui:input-search markupView="lexicon" name="filterKeywords" />
-	</aui:nav-bar-search>
-</aui:nav-bar>
-
 <aui:form cssClass="container-fluid-1280" name="selectFolderFm">
 	<aui:fieldset-group markupView="lexicon">
 		<aui:fieldset>
@@ -58,7 +52,6 @@ String eventName = ParamUtil.getString(request, "eventName", liferayPortletRespo
 					);
 				}
 			},
-			filterElementId: '<%= liferayPortletResponse.getNamespace() + "filterKeywords" %>',
 			nodes: [<%= journalDisplayContext.getFoldersJSON() %>],
 			pathThemeImages: '<%= themeDisplay.getPathThemeImages() %>'
 		},
